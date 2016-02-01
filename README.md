@@ -1,4 +1,4 @@
-# GelfLogger
+# GelfLogger [![Build Status](https://travis-ci.org/jschniper/gelf_logger.svg?branch=master)](https://travis-ci.org/jschniper/gelf_logger)
 
 A logger backend that will generate Graylog Extended Log Format messages. The
 current version only supports gzipped UDP messages.
