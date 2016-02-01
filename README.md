@@ -20,6 +20,7 @@ config :logger, :gelf_logger,
   host: "127.0.0.1",
   port: 12201,
   application: "myapp",
+  compression: :gzip, # Defaults to :gzip, also accepts :zlib or :raw
   metadata: [:request_id, :function, :module, :file, :line]
 ```
 
@@ -29,9 +30,9 @@ Just use Logger as normal.
 
 ## Improvements
 
-- [ ] Tests
+- [x] Tests
 - [ ] TCP Support
-- [ ] Options for compression (none, zlib)
+- [x] Options for compression (none, zlib)
 - [ ] Send timestamp instead of relying on the Graylog server to set it
 - [ ] Find a better way of pulling the hostname
 

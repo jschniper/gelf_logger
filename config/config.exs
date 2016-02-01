@@ -15,6 +15,7 @@ config :logger, :gelf_logger,
   host: "127.0.0.1",
   port: 12201,
   application: "myapp",
+  compression: :raw,
   metadata: [:request_id, :function, :module, :file, :line]
 
 # It is also possible to import configuration files, relative to this

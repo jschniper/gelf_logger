@@ -77,16 +77,61 @@ defmodule GelfLoggerTest do
     assert map["level"] == 3 
   end
 
-  # test "should raise error if max message size is exceeded" do
-  #   assert_raise(ArgumentError, "Message too large", fn -> 
-  #     Logger.info "This is hard to do without disabling gzip"
-  #   end)
-  # end
+  # The Logger module truncates all messages over 8192 bytes so this can't be tested
+  test "should raise error if max message size is exceeded" do
+    # assert_raise(ArgumentError, "Message too large", fn -> 
+    #   Logger.info :crypto.rand_bytes(1000000) |> :base64.encode
+    # end)
+  end
+
+  test "using compression", context do
+    # First for gzip
+    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Application.put_env(:logger, :gelf_logger,
+    Application.get_env(:logger, :gelf_logger) |> Keyword.put(:compression, :gzip))
+
+    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Logger.info "test gzip"
+
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+    {:error, _ } = Poison.decode(packet)
+
+    map = process_packet(packet)
+
+    assert(map["long_message"] == "test gzip")
+
+    # Now, for zlib
+    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Application.put_env(:logger, :gelf_logger,
+    Application.get_env(:logger, :gelf_logger) |> Keyword.put(:compression, :zlib))
+
+    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Logger.info "test zlib"
+
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+    {:error, _ } = Poison.decode(packet)
+
+    map = process_packet(packet)
+
+    assert(map["long_message"] == "test zlib")
+  end
 
   defp process_packet(packet) do
-    data = :zlib.gunzip(packet)
+    compression = Application.get_env(:logger, :gelf_logger)[:compression]
 
-    {:ok,  map} = Poison.decode(data)
+    data = case compression do
+      :gzip -> :zlib.gunzip(packet)
+      :zlib -> :zlib.uncompress(packet)
+      _ -> packet
+    end
+
+    {:ok,  map} = Poison.decode(data |> to_string)
 
     map
   end

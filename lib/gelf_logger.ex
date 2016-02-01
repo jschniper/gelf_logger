@@ -44,8 +44,9 @@ defmodule Logger.Backends.Gelf do
     application     = Keyword.get(config, :application)
     level           = Keyword.get(config, :level)
     metadata        = Keyword.get(config, :metadata, [])
+    compression     = Keyword.get(config, :compression, :gzip)
 
-    %{name: name, gl_host: gl_host, host: String.strip(host), port: port, metadata: metadata, level: level, application: application, socket: socket}
+    %{name: name, gl_host: gl_host, host: String.strip(host), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression}
   end
 
   defp log_event(level, msg, ts, md, state) do
@@ -73,9 +74,9 @@ defmodule Logger.Backends.Gelf do
       _application:   state[:application]
     } |> Map.merge(fields)
 
-    compressed = Poison.encode!(gelf) |> :zlib.gzip
+    data = Poison.encode!(gelf) |> compress(state[:compression])
 
-    size = byte_size(compressed)
+    size = byte_size(data)
 
     cond do
       size > @max_size ->
@@ -89,9 +90,9 @@ defmodule Logger.Backends.Gelf do
 
         id = :crypto.rand_bytes(8)
 
-        send_chunks(state[:socket], state[:gl_host], state[:port], compressed, id, :binary.encode_unsigned(num), 0, size)
+        send_chunks(state[:socket], state[:gl_host], state[:port], data, id, :binary.encode_unsigned(num), 0, size)
       true ->
-        :gen_udp.send(state[:socket], state[:gl_host], state[:port], compressed)
+        :gen_udp.send(state[:socket], state[:gl_host], state[:port], data)
     end
   end
 
@@ -111,5 +112,16 @@ defmodule Logger.Backends.Gelf do
     bin = :binary.encode_unsigned(seq)
     
     <<0x1e, 0x0f, id :: binary - size(8), bin :: binary - size(1), num :: binary - size(1), payload :: binary >>
+  end
+
+  defp compress(data, type) do
+    case type do
+      :gzip ->
+        :zlib.gzip(data)
+      :zlib ->
+        :zlib.compress(data)
+      _ ->
+        data
+    end
   end
 end
