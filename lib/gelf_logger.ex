@@ -54,7 +54,6 @@ defmodule Logger.Backends.Gelf do
       :info  -> 1
       :warn  -> 2
       :error -> 3
-      :fatal -> 4
     end
    
     fields = Enum.reduce(Dict.take(md, state[:metadata]), %{}, fn({k,v}, accum) ->
@@ -65,7 +64,7 @@ defmodule Logger.Backends.Gelf do
     {{year, month, day}, {hour, min, sec, milli}} = ts
 
     gelf = %{
-      short_message:  String.slice(to_string(msg), 0..80),
+      short_message:  String.slice(to_string(msg), 0..79),
       long_message:   to_string(msg),
       version:        "1.1",
       host:           state[:host],
@@ -80,7 +79,7 @@ defmodule Logger.Backends.Gelf do
 
     cond do
       size > @max_size ->
-        raise "Message too large"
+        raise ArgumentError, message: "Message too large"
       size > @max_packet_size ->
         num = div(size, @max_packet_size)
 
