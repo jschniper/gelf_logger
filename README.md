@@ -33,8 +33,8 @@ Just use Logger as normal.
 - [x] Tests
 - [ ] TCP Support
 - [x] Options for compression (none, zlib)
-- [ ] Send timestamp instead of relying on the Graylog server to set it
-- [ ] Find a better way of pulling the hostname
+- [x] Send timestamp instead of relying on the Graylog server to set it
+- [x] Find a better way of pulling the hostname
 
 And probably many more. This is only out here because it might be useful to
 someone in its current state. Pull requests are always welcome.

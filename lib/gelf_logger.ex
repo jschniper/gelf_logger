@@ -4,6 +4,7 @@ defmodule Logger.Backends.Gelf do
   @max_size 1047040
   @max_packet_size 8192
   @max_payload_size 8180
+  @epoch :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
 
   def init({__MODULE__, name}) do
     if user = Process.whereis(:user) do
@@ -37,7 +38,7 @@ defmodule Logger.Backends.Gelf do
 
     {:ok, socket} = :gen_udp.open(0)
     
-    {host, _exit_code} = System.cmd("hostname", [], [])
+    {:ok, hostname} = :inet.gethostname
 
     {:ok, gl_host } = Keyword.get(config, :host) |> to_char_list |> :inet_parse.address
     port            = Keyword.get(config, :port)
@@ -46,7 +47,7 @@ defmodule Logger.Backends.Gelf do
     metadata        = Keyword.get(config, :metadata, [])
     compression     = Keyword.get(config, :compression, :gzip)
 
-    %{name: name, gl_host: gl_host, host: String.strip(host), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression}
+    %{name: name, gl_host: gl_host, host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression}
   end
 
   defp log_event(level, msg, ts, md, state) do
@@ -61,8 +62,11 @@ defmodule Logger.Backends.Gelf do
       Map.put(accum, "_#{k}", to_string(v))
     end)
 
-    # TODO: fix timestamp
     {{year, month, day}, {hour, min, sec, milli}} = ts
+
+    epoch_seconds = :calendar.datetime_to_gregorian_seconds({{year, month, day}, {hour, min, sec}}) - @epoch
+
+    {timestamp, _remainder} = "#{epoch_seconds}.#{milli}" |> Float.parse
 
     gelf = %{
       short_message:  String.slice(to_string(msg), 0..79),
@@ -70,7 +74,7 @@ defmodule Logger.Backends.Gelf do
       version:        "1.1",
       host:           state[:host],
       level:          int_level,
-      _log_time:      "#{year}-#{month}-#{day} #{hour}:#{min}:#{sec}.#{milli}",
+      timestamp:      Float.round(timestamp, 3),
       _application:   state[:application]
     } |> Map.merge(fields)
 
