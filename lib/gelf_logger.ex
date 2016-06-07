@@ -1,5 +1,5 @@
 defmodule Logger.Backends.Gelf do
-  use GenEvent
+   use GenEvent
 
   @max_size 1047040
   @max_packet_size 8192
@@ -23,9 +23,9 @@ defmodule Logger.Backends.Gelf do
     {:ok, state}
   end
 
-  def handle_event({level, _gl, {Logger, msg, ts, md}}, %{level: min_level} = state) do
+  def handle_event({level, _gl, {Logger, msg, _ts, md}}, %{level: min_level} = state) do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
-      log_event(level, msg, ts, md, state)
+      log_event(level, msg, md, state)
     end
     {:ok, state}
   end
@@ -37,7 +37,7 @@ defmodule Logger.Backends.Gelf do
     Application.put_env(:logger, name, config)
 
     {:ok, socket} = :gen_udp.open(0)
-    
+
     {:ok, hostname} = :inet.gethostname
 
     {:ok, gl_host } = Keyword.get(config, :host) |> to_char_list |> :inet_parse.address
@@ -50,23 +50,17 @@ defmodule Logger.Backends.Gelf do
     %{name: name, gl_host: gl_host, host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression}
   end
 
-  defp log_event(level, msg, ts, md, state) do
+  defp log_event(level, msg, md, state) do
     int_level = case level do
       :debug -> 0
       :info  -> 1
       :warn  -> 2
       :error -> 3
     end
-   
+
     fields = Enum.reduce(Dict.take(md, state[:metadata]), %{}, fn({k,v}, accum) ->
       Map.put(accum, "_#{k}", to_string(v))
     end)
-
-    {{year, month, day}, {hour, min, sec, milli}} = ts
-
-    epoch_seconds = :calendar.datetime_to_gregorian_seconds({{year, month, day}, {hour, min, sec}}) - @epoch
-
-    {timestamp, _remainder} = "#{epoch_seconds}.#{milli}" |> Float.parse
 
     gelf = %{
       short_message:  String.slice(to_string(msg), 0..79),
@@ -74,7 +68,7 @@ defmodule Logger.Backends.Gelf do
       version:        "1.1",
       host:           state[:host],
       level:          int_level,
-      timestamp:      Float.round(timestamp, 3),
+      timestamp:      :os.system_time(:seconds),
       _application:   state[:application]
     } |> Map.merge(fields)
 
@@ -114,7 +108,7 @@ defmodule Logger.Backends.Gelf do
 
   defp make_chunk(payload, id, num, seq) do
     bin = :binary.encode_unsigned(seq)
-    
+
     <<0x1e, 0x0f, id :: binary - size(8), bin :: binary - size(1), num :: binary - size(1), payload :: binary >>
   end
 
