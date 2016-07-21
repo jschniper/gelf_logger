@@ -88,9 +88,12 @@ defmodule Logger.Backends.Gelf do
       size > @max_packet_size ->
         num = div(size, @max_packet_size)
 
-        if (num * @max_packet_size) < size do
-          num = num + 1
-        end
+        num = 
+          if (num * @max_packet_size) < size do
+            num + 1
+          else
+            num
+          end
 
         id = :crypto.rand_bytes(8)
 
