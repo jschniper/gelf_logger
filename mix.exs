@@ -3,13 +3,21 @@ defmodule GelfLogger.Mixfile do
 
   def project do
     [app: :gelf_logger,
-     version: "0.3.0",
+     version: "0.4.0",
      elixir: "~> 1.1",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps,
      description: description,
-     package: package
+     package: package,
+
+     # Docs
+     name: "GELF Logger",
+     source_url: "https://github.com/jschniper/gelf_logger",
+     docs: [
+       main: "Logger.Backends.Gelf",
+       extras: ["README.md"]
+     ]
    ]
   end
 
@@ -22,7 +30,8 @@ defmodule GelfLogger.Mixfile do
 
   defp deps do
    [
-     {:poison, ">= 1.0.0"}
+     {:poison, ">= 1.0.0"},
+     {:ex_doc, "~> 0.14", only: :dev}
    ]
   end
   

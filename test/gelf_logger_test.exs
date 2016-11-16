@@ -47,7 +47,7 @@ defmodule GelfLoggerTest do
 
     map = process_packet(packet)
 
-    assert map["level"] == 0 
+    assert map["level"] == 7
 
     # INFO
     Logger.info "info"
@@ -56,7 +56,7 @@ defmodule GelfLoggerTest do
 
     map = process_packet(packet)
 
-    assert map["level"] == 1 
+    assert map["level"] == 6 
 
     # WARN
     Logger.warn "warn"
@@ -65,7 +65,7 @@ defmodule GelfLoggerTest do
 
     map = process_packet(packet)
 
-    assert map["level"] == 2
+    assert map["level"] == 4
 
     # ERROR
     Logger.error "error"
