@@ -38,7 +38,7 @@ defmodule GelfLoggerTest do
 
     Logger.info "test"
 
-    {:ok, {address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
 
     map = process_packet(packet)
 
