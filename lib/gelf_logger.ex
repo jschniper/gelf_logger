@@ -87,7 +87,14 @@ defmodule Logger.Backends.Gelf do
 
     {:ok, socket} = :gen_udp.open(0)
     
-    {:ok, hostname} = :inet.gethostname
+    config_hostname = Keyword.get(config, :hostname)
+    hostname = case config_hostname do
+      nil -> 
+        {:ok, hostname} = :inet.gethostname
+        hostname
+      _ -> config_hostname
+    end
+
 
     {:ok, {:hostent, _, _, _, _, addr_list}} = Keyword.get(config, :host) |> to_char_list |> :inet.gethostbyname
 
