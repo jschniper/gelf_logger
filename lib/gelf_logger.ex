@@ -24,9 +24,16 @@ defmodule Logger.Backends.Gelf do
     port: 12201,
     application: "myapp",
     compression: :gzip, # Defaults to :gzip, also accepts :zlib or :raw
-    metadata: [:request_id, :function, :module, :file, :line]
+    metadata: [:request_id, :function, :module, :file, :line],
+    hostname: "hostname-override"
   ```
-  
+ 
+  In addition to the backend configuration, you might want to check the 
+  [Logger configuration](https://hexdocs.pm/logger/Logger.html) for other 
+  options that might be important for your particular environment. In 
+  particular, modifying the `:utc_log` setting might be necessary 
+  depending on your server configuration.
+ 
   ## Usage
   
   Just use Logger as normal.
