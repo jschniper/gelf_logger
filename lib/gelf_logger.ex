@@ -111,7 +111,11 @@ defmodule Logger.Backends.Gelf do
     metadata        = Keyword.get(config, :metadata, [])
     compression     = Keyword.get(config, :compression, :gzip)
 
-    %{name: name, gl_host: List.first(addr_list), host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression}
+    tags            = Enum.reduce(Application.get_env(:logger, :gelf_logger_tags, []), %{}, fn({k,v}, accum) ->
+                            Map.put(accum, "_#{k}", to_string(v))
+                            end)
+
+    %{name: name, gl_host: List.first(addr_list), host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression, tags: tags}
   end
 
   defp log_event(level, msg, ts, md, state) do
@@ -125,7 +129,7 @@ defmodule Logger.Backends.Gelf do
    
     fields = Enum.reduce(Dict.take(md, state[:metadata]), %{}, fn({k,v}, accum) ->
       Map.put(accum, "_#{k}", to_string(v))
-    end)
+    end) |> Map.merge(state[:tags])
 
     {{year, month, day}, {hour, min, sec, milli}} = ts
 
