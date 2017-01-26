@@ -3,8 +3,8 @@ defmodule GelfLogger.Mixfile do
 
   def project do
     [app: :gelf_logger,
-     version: "0.5.0",
-     elixir: "~> 1.1",
+     version: "0.6.0",
+     elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps,
