@@ -32,7 +32,7 @@ defmodule GelfLoggerTest do
     Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
 
     Application.put_env(:logger, :gelf_logger,
-    Application.get_env(:logger, :gelf_logger) |> Keyword.put(:hostname, 'host-dev-1'))
+      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:hostname, 'host-dev-1'))
 
     Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
 
@@ -43,6 +43,24 @@ defmodule GelfLoggerTest do
     map = process_packet(packet)
 
     assert map["host"] == "host-dev-1"
+  end
+
+  test "configurable tags", context do
+    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Application.put_env(:logger, :gelf_logger,
+      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:tags, [foo: "bar", baz: "qux"]))
+
+    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Logger.info "test"
+
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+    map = process_packet(packet)
+
+    assert map["_foo"] == "bar"
+    assert map["_baz"] == "qux"
   end
 
   test "short message should cap at 80 characters", context do

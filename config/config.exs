@@ -16,10 +16,10 @@ config :logger, :gelf_logger,
   port: 12201,
   application: "myapp",
   compression: :raw,
-  metadata: [:request_id, :function, :module, :file, :line]
-
-config :logger, :gelf_logger_tags,
-  env: "#{Mix.env}"
+  metadata: [:request_id, :function, :module, :file, :line],
+  tags: [
+    env: "#{Mix.env}"
+  ]
 
 # It is also possible to import configuration files, relative to this
 # directory. For example, you can emulate configuration per environment

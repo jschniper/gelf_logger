@@ -22,7 +22,11 @@ config :logger, :gelf_logger,
   application: "myapp",
   compression: :gzip, # Defaults to :gzip, also accepts :zlib or :raw
   metadata: [:request_id, :function, :module, :file, :line],
-  hostname: "hostname-override"
+  hostname: "hostname-override",
+  tags: [
+    list: "of",
+    extra: "tags"
+  ]
 ```
 
 In addition to the backend configuration, you might want to check the 

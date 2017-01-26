@@ -25,7 +25,11 @@ defmodule Logger.Backends.Gelf do
     application: "myapp",
     compression: :gzip, # Defaults to :gzip, also accepts :zlib or :raw
     metadata: [:request_id, :function, :module, :file, :line],
-    hostname: "hostname-override"
+    hostname: "hostname-override",
+    tags: [
+      list: "of",
+      extra: "tags"
+    ]
   ```
  
   In addition to the backend configuration, you might want to check the 
@@ -94,14 +98,9 @@ defmodule Logger.Backends.Gelf do
 
     {:ok, socket} = :gen_udp.open(0)
     
-    config_hostname = Keyword.get(config, :hostname)
-    hostname = case config_hostname do
-      nil -> 
-        {:ok, hostname} = :inet.gethostname
-        hostname
-      _ -> config_hostname
-    end
+    {:ok, hostname} = :inet.gethostname
 
+    hostname = Keyword.get(config, :hostname, hostname)
 
     {:ok, {:hostent, _, _, _, _, addr_list}} = Keyword.get(config, :host) |> to_char_list |> :inet.gethostbyname
 
@@ -110,10 +109,7 @@ defmodule Logger.Backends.Gelf do
     level           = Keyword.get(config, :level)
     metadata        = Keyword.get(config, :metadata, [])
     compression     = Keyword.get(config, :compression, :gzip)
-
-    tags            = Enum.reduce(Application.get_env(:logger, :gelf_logger_tags, []), %{}, fn({k,v}, accum) ->
-                            Map.put(accum, "_#{k}", to_string(v))
-                            end)
+    tags            = Keyword.get(config, :tags, %{})
 
     %{name: name, gl_host: List.first(addr_list), host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression, tags: tags}
   end
@@ -127,9 +123,11 @@ defmodule Logger.Backends.Gelf do
         :error -> 3
       end
    
-    fields = Enum.reduce(Dict.take(md, state[:metadata]), %{}, fn({k,v}, accum) ->
-      Map.put(accum, "_#{k}", to_string(v))
-    end) |> Map.merge(state[:tags])
+    fields = 
+      md
+      |> Keyword.take(state[:metadata])
+      |> Keyword.merge(state[:tags])
+      |> Map.new(fn({k,v}) -> {"_#{k}", to_string(v)} end)
 
     {{year, month, day}, {hour, min, sec, milli}} = ts
 
