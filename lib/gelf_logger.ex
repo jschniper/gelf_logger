@@ -2,22 +2,22 @@ defmodule Logger.Backends.Gelf do
   @moduledoc """
   GELF Logger Backend
   # GelfLogger [![Build Status](https://travis-ci.org/jschniper/gelf_logger.svg?branch=master)](https://travis-ci.org/jschniper/gelf_logger)
-  
+
   A logger backend that will generate Graylog Extended Log Format messages. The
   current version only supports UDP messages.
-  
+
   ## Configuration
-  
+
   In the config.exs, add gelf_logger as a backend like this:
-  
+
   ```
   config :logger,
     backends: [:console, {Logger.Backends.Gelf, :gelf_logger}]
   ```
-  
+
   In addition, you'll need to pass in some configuration items to the backend
   itself:
-  
+
   ```
   config :logger, :gelf_logger,
     host: "127.0.0.1",
@@ -31,30 +31,30 @@ defmodule Logger.Backends.Gelf do
       extra: "tags"
     ]
   ```
- 
-  In addition to the backend configuration, you might want to check the 
-  [Logger configuration](https://hexdocs.pm/logger/Logger.html) for other 
-  options that might be important for your particular environment. In 
-  particular, modifying the `:utc_log` setting might be necessary 
+
+  In addition to the backend configuration, you might want to check the
+  [Logger configuration](https://hexdocs.pm/logger/Logger.html) for other
+  options that might be important for your particular environment. In
+  particular, modifying the `:utc_log` setting might be necessary
   depending on your server configuration.
- 
+
   ## Usage
-  
+
   Just use Logger as normal.
-  
+
   ## Improvements
-  
+
   - [x] Tests
   - [ ] TCP Support
   - [x] Options for compression (none, zlib)
   - [x] Send timestamp instead of relying on the Graylog server to set it
   - [x] Find a better way of pulling the hostname
-  
+
   And probably many more. This is only out here because it might be useful to
   someone in its current state. Pull requests are always welcome.
-  
+
   ## Notes
-  
+
   Credit where credit is due, this would not exist without
   [protofy/erl_graylog_sender](https://github.com/protofy/erl_graylog_sender).
   """
@@ -97,7 +97,7 @@ defmodule Logger.Backends.Gelf do
     Application.put_env(:logger, name, config)
 
     {:ok, socket} = :gen_udp.open(0)
-    
+
     {:ok, hostname} = :inet.gethostname
 
     hostname = Keyword.get(config, :hostname, hostname)
@@ -115,15 +115,15 @@ defmodule Logger.Backends.Gelf do
   end
 
   defp log_event(level, msg, ts, md, state) do
-    int_level = 
+    int_level =
       case level do
         :debug -> 7
         :info  -> 6
         :warn  -> 4
         :error -> 3
       end
-   
-    fields = 
+
+    fields =
       md
       |> Keyword.take(state[:metadata])
       |> Keyword.merge(state[:tags])
@@ -155,14 +155,14 @@ defmodule Logger.Backends.Gelf do
       size > @max_packet_size ->
         num = div(size, @max_packet_size)
 
-        num = 
+        num =
           if (num * @max_packet_size) < size do
             num + 1
           else
             num
           end
 
-        id = :crypto.rand_bytes(8)
+        id = :crypto.strong_rand_bytes(8)
 
         send_chunks(state[:socket], state[:gl_host], state[:port], data, id, :binary.encode_unsigned(num), 0, size)
       true ->
@@ -184,7 +184,7 @@ defmodule Logger.Backends.Gelf do
 
   defp make_chunk(payload, id, num, seq) do
     bin = :binary.encode_unsigned(seq)
-    
+
     << 0x1e, 0x0f, id :: binary - size(8), bin :: binary - size(1), num :: binary - size(1), payload :: binary >>
   end
 
