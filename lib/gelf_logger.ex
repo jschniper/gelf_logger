@@ -69,7 +69,10 @@ defmodule Logger.Backends.Gelf do
   def init({__MODULE__, name}) do
     if user = Process.whereis(:user) do
       Process.group_leader(self(), user)
-      {:ok, configure(name, [])}
+      case configure(name, []) do
+         {:ok, _} ->
+         {:error, _} -> Process.exit(self(), :kill)
+      end
     else
       {:error, :ignore}
     end
