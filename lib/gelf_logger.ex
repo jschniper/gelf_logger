@@ -102,8 +102,7 @@ defmodule Logger.Backends.Gelf do
 
     hostname = Keyword.get(config, :hostname, hostname)
 
-    {:ok, {:hostent, _, _, _, _, addr_list}} = Keyword.get(config, :host) |> to_char_list |> :inet.gethostbyname
-
+    gl_host         = Keyword.get(config, :host) |> to_char_list
     port            = Keyword.get(config, :port)
     application     = Keyword.get(config, :application)
     level           = Keyword.get(config, :level)
@@ -111,7 +110,7 @@ defmodule Logger.Backends.Gelf do
     compression     = Keyword.get(config, :compression, :gzip)
     tags            = Keyword.get(config, :tags, %{})
 
-    %{name: name, gl_host: List.first(addr_list), host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression, tags: tags}
+    %{name: name, gl_host: gl_host, host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression, tags: tags}
   end
 
   defp log_event(level, msg, ts, md, state) do
