@@ -70,12 +70,24 @@ defmodule Logger.Backends.Gelf do
     if user = Process.whereis(:user) do
       Process.group_leader(self(), user)
       case configure(name, []) do
-         {:ok, _} ->
-         {:error, _} -> Process.exit(self(), :kill)
+         {:ok, pid} -> configure(name, [])
+         {:error, _} ->
+           Process.send_after(self(), :restart, 10_000)
+           {:ok, [name]}
       end
     else
       {:error, :ignore}
     end
+  end
+
+  def handle_info(:restart, [name]) do
+    case configure(name, []) do
+       {:ok, pid} -> configure(name, [])
+       {:error, _} ->
+         Process.send_after(self(), :restart, 10_000)
+         {:ok, [name]}
+    end
+    {:noreply, []}
   end
 
   def handle_call({:configure, options}, state) do
