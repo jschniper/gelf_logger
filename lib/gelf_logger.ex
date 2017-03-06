@@ -72,6 +72,7 @@ defmodule Logger.Backends.Gelf do
       case configure(name, []) do
          {:ok, pid} -> configure(name, [])
          {:error, _} ->
+           IO.puts "logger restarted in init"
            Process.send_after(self(), :restart, 10_000)
            {:ok, [name]}
       end
@@ -84,6 +85,7 @@ defmodule Logger.Backends.Gelf do
     case configure(name, []) do
        {:ok, pid} -> configure(name, [])
        {:error, _} ->
+         IO.puts "logger restarted"
          Process.send_after(self(), :restart, 10_000)
          {:ok, [name]}
     end
