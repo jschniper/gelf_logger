@@ -69,27 +69,25 @@ defmodule Logger.Backends.Gelf do
   def init({__MODULE__, name}) do
     if user = Process.whereis(:user) do
       Process.group_leader(self(), user)
-      case configure(name, []) do
-         {:ok, pid} -> configure(name, [])
-         {:error, _} ->
-           Logger.info "logger restarted in init"
-           Process.send_after(self(), :restart, 10_000)
-           {:ok, [name]}
-      end
+      handle_startup()
     else
       {:error, :ignore}
     end
   end
 
   def handle_info(:restart, [name]) do
-    case configure(name, []) do
-       {:ok, pid} -> configure(name, [])
-       {:error, _} ->
-         Logger.info "logger restarted"
+    handle_startup()
+    {:noreply, []}
+  end
+
+  defp handle_startup do
+    result = configure(name, [])
+    case result do
+      {:ok, pid} -> result
+      {:error, _} ->
          Process.send_after(self(), :restart, 10_000)
          {:ok, [name]}
     end
-    {:noreply, []}
   end
 
   def handle_call({:configure, options}, state) do
