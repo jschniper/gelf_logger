@@ -108,7 +108,7 @@ defmodule Logger.Backends.Gelf do
     level           = Keyword.get(config, :level)
     metadata        = Keyword.get(config, :metadata, [])
     compression     = Keyword.get(config, :compression, :gzip)
-    tags            = Keyword.get(config, :tags, %{})
+    tags            = Keyword.get(config, :tags, [])
 
     %{name: name, gl_host: gl_host, host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression, tags: tags}
   end
