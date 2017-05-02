@@ -28,6 +28,26 @@ defmodule GelfLoggerTest do
     assert map["long_message"] == "test"
   end
 
+  test "convert port from binary to integer", context do
+    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Application.put_env(:logger, :gelf_logger,
+      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:port, "12201"))
+
+    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Logger.info "test"
+
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+    map = process_packet(packet)
+
+    assert map["version"] == "1.1"
+    assert map["_application"] == "myapp"
+    assert map["short_message"] == "test"
+    assert map["long_message"] == "test"
+  end
+
   test "configurable source (host)", context do
     Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
 
