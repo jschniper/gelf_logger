@@ -69,18 +69,18 @@ defmodule Logger.Backends.Gelf do
   def init({__MODULE__, name}) do
     if user = Process.whereis(:user) do
       Process.group_leader(self(), user)
-      handle_startup()
+      handle_startup(name)
     else
       {:error, :ignore}
     end
   end
 
   def handle_info(:restart, [name]) do
-    handle_startup()
+    handle_startup(name)
     {:noreply, []}
   end
 
-  defp handle_startup do
+  defp handle_startup(name) do
     result = configure(name, [])
     case result do
       {:ok, pid} -> result
