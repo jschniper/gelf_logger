@@ -83,7 +83,7 @@ defmodule Logger.Backends.Gelf do
   defp handle_startup(name) do
     result = configure(name, [])
     case result do
-      {:ok, pid} -> result
+      {:ok, _pid} -> result
       {:error, _} ->
          Process.send_after(self(), :restart, 10_000)
          {:ok, [name]}
@@ -125,11 +125,11 @@ defmodule Logger.Backends.Gelf do
     compression     = Keyword.get(config, :compression, :gzip)
     tags            = Keyword.get(config, :tags, [])
 
-    port = 
+    port =
       cond do
         is_binary(port) ->
           {val, ""} = Integer.parse(to_string(port))
-          
+
           val
         true ->
           port
