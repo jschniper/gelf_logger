@@ -114,11 +114,11 @@ defmodule Logger.Backends.Gelf do
     compression     = Keyword.get(config, :compression, :gzip)
     tags            = Keyword.get(config, :tags, [])
 
-    port = 
+    port =
       cond do
         is_binary(port) ->
           {val, ""} = Integer.parse(to_string(port))
-          
+
           val
         true ->
           port
