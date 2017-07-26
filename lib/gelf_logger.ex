@@ -90,6 +90,10 @@ defmodule Logger.Backends.Gelf do
     {:ok, state}
   end
 
+  def handle_event(:flush, state) do
+    {:ok, state}
+  end
+
   ## Helpers
 
   defp configure(name, options) do
