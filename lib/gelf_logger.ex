@@ -83,10 +83,10 @@ defmodule Logger.Backends.Gelf do
   defp handle_startup(name) do
     result = configure(name, [])
     case result do
-      {:ok, _pid} -> result
-      {:error, _} ->
-         Process.send_after(self(), :restart, 10_000)
-         {:ok, [name]}
+      :error ->
+        Process.send_after(self(), :restart, 10_000)
+        {:ok, [name]}
+      result -> {:ok, result}
     end
   end
 
