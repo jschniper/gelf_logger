@@ -69,9 +69,24 @@ defmodule Logger.Backends.Gelf do
   def init({__MODULE__, name}) do
     if user = Process.whereis(:user) do
       Process.group_leader(self(), user)
-      {:ok, configure(name, [])}
+      handle_startup(name)
     else
       {:error, :ignore}
+    end
+  end
+
+  def handle_info(:restart, [name]) do
+    handle_startup(name)
+    {:noreply, []}
+  end
+
+  defp handle_startup(name) do
+    result = configure(name, [])
+    case result do
+      :error ->
+        Process.send_after(self(), :restart, 10_000)
+        {:ok, [name]}
+      result -> {:ok, result}
     end
   end
 
@@ -114,11 +129,11 @@ defmodule Logger.Backends.Gelf do
     compression     = Keyword.get(config, :compression, :gzip)
     tags            = Keyword.get(config, :tags, [])
 
-    port = 
+    port =
       cond do
         is_binary(port) ->
           {val, ""} = Integer.parse(to_string(port))
-          
+
           val
         true ->
           port
