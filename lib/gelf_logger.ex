@@ -140,7 +140,7 @@ defmodule Logger.Backends.Gelf do
       md
       |> Keyword.take(state[:metadata])
       |> Keyword.merge(state[:tags])
-      |> Map.new(fn({k,v}) -> {"_#{k}", to_string(v)} end)
+      |> Map.new(fn({k,v}) -> {"_#{k}", IO.inspect(v)} end)
 
     {{year, month, day}, {hour, min, sec, milli}} = ts
 
