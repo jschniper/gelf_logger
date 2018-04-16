@@ -16,7 +16,7 @@ config :logger, :gelf_logger,
   port: 12201,
   application: "myapp",
   compression: :raw,
-  metadata: [:request_id, :function, :module, :file, :line],
+  metadata: [:all],
   tags: [
     env: "#{Mix.env}"
   ]
