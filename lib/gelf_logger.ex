@@ -37,6 +37,7 @@ defmodule Logger.Backends.Gelf do
   options that might be important for your particular environment. In
   particular, modifying the `:utc_log` setting might be necessary
   depending on your server configuration.
+  This backend supports `metadata: :all`.
 
   ## Usage
 
@@ -137,8 +138,11 @@ defmodule Logger.Backends.Gelf do
       end
 
     fields =
-      md
-      |> Keyword.take(state[:metadata])
+      state[:metadata]
+      |> case do
+        :all -> md # Use all metadata
+        keys -> Keyword.take(md, keys) # Use only configured metadata keys
+      end
       |> Keyword.merge(state[:tags])
       |> Map.new(fn({k,v}) -> 
         case String.Chars.impl_for(v) do

@@ -83,6 +83,46 @@ defmodule GelfLoggerTest do
     assert map["_baz"] == "qux"
   end
 
+  test "configurable metadata", context do
+    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Application.put_env(:logger, :gelf_logger,
+      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:metadata, [:this]))
+
+    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Logger.metadata(this: "that", something: "else")
+    Logger.info "test"
+
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+    map = process_packet(packet)
+
+    assert map["_application"] == "myapp"
+    assert map["_this"] == "that"
+    assert map["_something"] == nil
+  end
+
+  test "all metadata possible", context do
+    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Application.put_env(:logger, :gelf_logger,
+      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:metadata, :all))
+
+    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Logger.metadata(this: "that", something: "else")
+    Logger.info "test"
+
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+    map = process_packet(packet)
+
+    assert map["_application"] == "myapp"
+    assert map["_this"] == "that"
+    assert map["_something"] == "else"
+  end
+
   test "short message should cap at 80 characters", context do
     Logger.info "This is a test string that is over eighty characters but only because I kept typing garbage long after I had run out of things to say"
 
