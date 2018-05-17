@@ -91,7 +91,6 @@ defmodule GelfLoggerTest do
 
     Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
 
-    Logger.reset_metadata([])
     Logger.metadata(this: "that", something: "else")
     Logger.info "test"
 
@@ -112,7 +111,6 @@ defmodule GelfLoggerTest do
 
     Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
 
-    Logger.reset_metadata([])
     Logger.metadata(this: "that", something: "else")
     Logger.info "test"
 
