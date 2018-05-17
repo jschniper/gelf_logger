@@ -34,6 +34,7 @@ In addition to the backend configuration, you might want to check the
 options that might be important for your particular environment. In 
 particular, modifying the `:utc_log` setting might be necessary 
 depending on your server configuration.
+This backend supports `metadata: :all`.
 
 ## Usage
 
