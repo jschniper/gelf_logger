@@ -107,7 +107,7 @@ defmodule Logger.Backends.Gelf do
 
     hostname = Keyword.get(config, :hostname, hostname)
 
-    gl_host         = Keyword.get(config, :host) |> to_char_list
+    gl_host         = Keyword.get(config, :host) |> to_charlist
     port            = Keyword.get(config, :port)
     application     = Keyword.get(config, :application)
     level           = Keyword.get(config, :level)
@@ -115,11 +115,11 @@ defmodule Logger.Backends.Gelf do
     compression     = Keyword.get(config, :compression, :gzip)
     tags            = Keyword.get(config, :tags, [])
 
-    port = 
+    port =
       cond do
         is_binary(port) ->
           {val, ""} = Integer.parse(to_string(port))
-          
+
           val
         true ->
           port
@@ -144,12 +144,12 @@ defmodule Logger.Backends.Gelf do
         keys -> Keyword.take(md, keys) # Use only configured metadata keys
       end
       |> Keyword.merge(state[:tags])
-      |> Map.new(fn({k,v}) -> 
+      |> Map.new(fn({k,v}) ->
         case String.Chars.impl_for(v) do
           nil ->
-            {"_#{k}", inspect(v)} 
+            {"_#{k}", inspect(v)}
           _ ->
-            {"_#{k}", to_string(v)} 
+            {"_#{k}", to_string(v)}
         end
       end)
 
@@ -169,7 +169,7 @@ defmodule Logger.Backends.Gelf do
       _application:   state[:application]
     } |> Map.merge(fields)
 
-    data = Poison.encode!(gelf) |> compress(state[:compression])
+    data = Jason.encode!(gelf) |> compress(state[:compression])
 
     size = byte_size(data)
 

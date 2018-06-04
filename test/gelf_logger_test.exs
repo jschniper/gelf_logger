@@ -6,7 +6,7 @@ defmodule GelfLoggerTest do
 
   Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
 
-  setup do 
+  setup do
     {:ok, socket} = :gen_udp.open(12201, [:binary, {:active, false}])
 
     {:ok, [socket: socket]}
@@ -16,10 +16,10 @@ defmodule GelfLoggerTest do
     Logger.info "test"
 
     {:ok, {address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
-    
+
     # Should be coming from localhost
     assert address == {127,0,0,1}
-    
+
     map = process_packet(packet)
 
     assert map["version"] == "1.1"
@@ -127,7 +127,7 @@ defmodule GelfLoggerTest do
     Logger.info "This is a test string that is over eighty characters but only because I kept typing garbage long after I had run out of things to say"
 
     {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
-    
+
      map = process_packet(packet)
 
     assert map["short_message"] != map["long_message"]
@@ -151,7 +151,7 @@ defmodule GelfLoggerTest do
 
     map = process_packet(packet)
 
-    assert map["level"] == 6 
+    assert map["level"] == 6
 
     # WARN
     Logger.warn "warn"
@@ -169,12 +169,12 @@ defmodule GelfLoggerTest do
 
     map = process_packet(packet)
 
-    assert map["level"] == 3 
+    assert map["level"] == 3
   end
 
   # The Logger module truncates all messages over 8192 bytes so this can't be tested
   test "should raise error if max message size is exceeded" do
-    # assert_raise(ArgumentError, "Message too large", fn -> 
+    # assert_raise(ArgumentError, "Message too large", fn ->
     #   Logger.info :crypto.rand_bytes(1000000) |> :base64.encode
     # end)
   end
@@ -192,7 +192,7 @@ defmodule GelfLoggerTest do
 
     {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
 
-    {:error, _ } = Poison.decode(packet)
+    {:error, _ } = Jason.decode(packet)
 
     map = process_packet(packet)
 
@@ -210,7 +210,7 @@ defmodule GelfLoggerTest do
 
     {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
 
-    {:error, _ } = Poison.decode(packet)
+    {:error, _ } = Jason.decode(packet)
 
     map = process_packet(packet)
 
@@ -226,7 +226,7 @@ defmodule GelfLoggerTest do
       _ -> packet
     end
 
-    {:ok,  map} = Poison.decode(data |> to_string)
+    {:ok,  map} = Jason.decode(data |> to_string)
 
     map
   end
