@@ -60,12 +60,12 @@ defmodule Logger.Backends.Gelf do
   [protofy/erl_graylog_sender](https://github.com/protofy/erl_graylog_sender).
   """
 
-  use GenEvent
-
   @max_size 1047040
   @max_packet_size 8192
   @max_payload_size 8180
   @epoch :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
+
+  @behaviour :gen_event
 
   def init({__MODULE__, name}) do
     if user = Process.whereis(:user) do
@@ -93,6 +93,31 @@ defmodule Logger.Backends.Gelf do
 
   def handle_event(:flush, state) do
     {:ok, state}
+  end
+
+  def handle_info({:io_reply, ref, :ok}, %{ref: ref} = state) do
+    Process.demonitor(ref, [:flush])
+    {:ok, state}
+  end
+
+  def handle_info({:io_reply, _ref, {:error, error}}, _state) do
+    raise "failure while logging gelf messages: " <> inspect(error)
+  end
+
+  def handle_info({:DOWN, ref, _, pid, reason}, %{ref: ref}) do
+    raise "device #{inspect(pid)} exited: " <> Exception.format_exit(reason)
+  end
+
+  def handle_info(_, state) do
+    {:ok, state}
+  end
+
+  def code_change(_old_vsn, state, _extra) do
+    {:ok, state}
+  end
+
+  def terminate(_reason, _state) do
+    :ok
   end
 
   ## Helpers
