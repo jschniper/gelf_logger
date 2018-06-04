@@ -107,7 +107,7 @@ defmodule Logger.Backends.Gelf do
 
     hostname = Keyword.get(config, :hostname, hostname)
 
-    gl_host         = Keyword.get(config, :host) |> to_char_list
+    gl_host         = Keyword.get(config, :host) |> to_charlist
     port            = Keyword.get(config, :port)
     application     = Keyword.get(config, :application)
     level           = Keyword.get(config, :level)
