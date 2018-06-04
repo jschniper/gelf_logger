@@ -95,7 +95,6 @@ defmodule Logger.Backends.Gelf do
   def handle_event(:flush, state) do
     {:ok, state}
   end
-  #:io_reply, ref, msg => handle_io_reply(msg, state)
 
   def handle_info({:io_reply, ref, :ok}, %{ref: ref} = state) do
     Process.demonitor(ref, [:flush])
