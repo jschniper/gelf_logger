@@ -1,7 +1,7 @@
 defmodule GelfLoggerTest do
   require Logger
 
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest Logger.Backends.Gelf
 
   Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
