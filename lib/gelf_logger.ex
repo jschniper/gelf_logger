@@ -66,7 +66,7 @@ defmodule Logger.Backends.Gelf do
   [protofy/erl_graylog_sender](https://github.com/protofy/erl_graylog_sender).
   """
 
-  @max_size 1047040
+  @max_size 1_047_040
   @max_packet_size 8192
   @max_payload_size 8180
   @epoch :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
@@ -94,6 +94,7 @@ defmodule Logger.Backends.Gelf do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
       log_event(level, msg, ts, md, state)
     end
+
     {:ok, state}
   end
 
@@ -134,72 +135,94 @@ defmodule Logger.Backends.Gelf do
 
     {:ok, socket} = :gen_udp.open(0)
 
-    {:ok, hostname} = :inet.gethostname
+    {:ok, hostname} = :inet.gethostname()
 
     hostname = Keyword.get(config, :hostname, hostname)
 
-    gl_host         = Keyword.get(config, :host) |> to_charlist
-    port            = Keyword.get(config, :port)
-    application     = Keyword.get(config, :application)
-    level           = Keyword.get(config, :level)
-    metadata        = Keyword.get(config, :metadata, [])
-    compression     = Keyword.get(config, :compression, :gzip)
-    encoder         = Keyword.get(config, :json_encoder, Poison)
-    tags            = Keyword.get(config, :tags, [])
+    gl_host = Keyword.get(config, :host) |> to_charlist
+    port = Keyword.get(config, :port)
+    application = Keyword.get(config, :application)
+    level = Keyword.get(config, :level)
+    metadata = Keyword.get(config, :metadata, [])
+    compression = Keyword.get(config, :compression, :gzip)
+    encoder = Keyword.get(config, :json_encoder, Poison)
+    tags = Keyword.get(config, :tags, [])
 
-    port = 
+    port =
       cond do
         is_binary(port) ->
           {val, ""} = Integer.parse(to_string(port))
-          
+
           val
+
         true ->
           port
       end
 
-    %{name: name, gl_host: gl_host, host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression, tags: tags, encoder: encoder}
+    %{
+      name: name,
+      gl_host: gl_host,
+      host: to_string(hostname),
+      port: port,
+      metadata: metadata,
+      level: level,
+      application: application,
+      socket: socket,
+      compression: compression,
+      tags: tags,
+      encoder: encoder
+    }
   end
 
   defp log_event(level, msg, ts, md, state) do
     int_level =
       case level do
         :debug -> 7
-        :info  -> 6
-        :warn  -> 4
+        :info -> 6
+        :warn -> 4
         :error -> 3
       end
 
     fields =
       state[:metadata]
       |> case do
-        :all -> md # Use all metadata
-        keys -> Keyword.take(md, keys) # Use only configured metadata keys
+        # Use all metadata
+        :all ->
+          md
+
+        # Use only configured metadata keys
+        keys ->
+          Keyword.take(md, keys)
       end
       |> Keyword.merge(state[:tags])
-      |> Map.new(fn({k,v}) -> 
+      |> Map.new(fn {k, v} ->
         case String.Chars.impl_for(v) do
           nil ->
-            {"_#{k}", inspect(v)} 
+            {"_#{k}", inspect(v)}
+
           _ ->
-            {"_#{k}", to_string(v)} 
+            {"_#{k}", to_string(v)}
         end
       end)
 
     {{year, month, day}, {hour, min, sec, milli}} = ts
 
-    epoch_seconds = :calendar.datetime_to_gregorian_seconds({{year, month, day}, {hour, min, sec}}) - @epoch
+    epoch_seconds =
+      :calendar.datetime_to_gregorian_seconds({{year, month, day}, {hour, min, sec}}) - @epoch
 
-    {timestamp, _remainder} = "#{epoch_seconds}.#{milli}" |> Float.parse
+    {timestamp, _remainder} = "#{epoch_seconds}.#{milli}" |> Float.parse()
 
-    gelf = %{
-      short_message:  String.slice(to_string(msg), 0..79),
-      long_message:   to_string(msg),
-      version:        "1.1",
-      host:           state[:host],
-      level:          int_level,
-      timestamp:      Float.round(timestamp, 3),
-      _application:   state[:application]
-    } |> Map.merge(fields)
+    gelf =
+      %{
+        short_message: String.slice(to_string(msg), 0..79),
+        long_message: to_string(msg),
+        version: "1.1",
+        host: state[:host],
+        level: int_level,
+        timestamp: Float.round(timestamp, 3),
+        _application: state[:application]
+      }
+      |> Map.merge(fields)
 
     data = encode(gelf, state[:encoder]) |> compress(state[:compression])
 
@@ -208,11 +231,12 @@ defmodule Logger.Backends.Gelf do
     cond do
       size > @max_size ->
         raise ArgumentError, message: "Message too large"
+
       size > @max_packet_size ->
         num = div(size, @max_packet_size)
 
         num =
-          if (num * @max_packet_size) < size do
+          if num * @max_packet_size < size do
             num + 1
           else
             num
@@ -220,14 +244,24 @@ defmodule Logger.Backends.Gelf do
 
         id = :crypto.strong_rand_bytes(8)
 
-        send_chunks(state[:socket], state[:gl_host], state[:port], data, id, :binary.encode_unsigned(num), 0, size)
+        send_chunks(
+          state[:socket],
+          state[:gl_host],
+          state[:port],
+          data,
+          id,
+          :binary.encode_unsigned(num),
+          0,
+          size
+        )
+
       true ->
         :gen_udp.send(state[:socket], state[:gl_host], state[:port], data)
     end
   end
 
   defp send_chunks(socket, host, port, data, id, num, seq, size) when size > @max_payload_size do
-    <<payload :: binary - size(@max_payload_size), rest :: binary >> = data
+    <<payload::binary-size(@max_payload_size), rest::binary>> = data
 
     :gen_udp.send(socket, host, port, make_chunk(payload, id, num, seq))
 
@@ -241,7 +275,7 @@ defmodule Logger.Backends.Gelf do
   defp make_chunk(payload, id, num, seq) do
     bin = :binary.encode_unsigned(seq)
 
-    << 0x1e, 0x0f, id :: binary - size(8), bin :: binary - size(1), num :: binary - size(1), payload :: binary >>
+    <<0x1E, 0x0F, id::binary-size(8), bin::binary-size(1), num::binary-size(1), payload::binary>>
   end
 
   defp encode(data, encoder) do
@@ -252,8 +286,10 @@ defmodule Logger.Backends.Gelf do
     case type do
       :gzip ->
         :zlib.gzip(data)
+
       :zlib ->
         :zlib.compress(data)
+
       _ ->
         data
     end
