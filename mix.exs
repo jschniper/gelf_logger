@@ -30,8 +30,9 @@ defmodule GelfLogger.Mixfile do
 
   defp deps do
    [
-     {:poison, ">= 1.0.0"},
-     {:ex_doc, "~> 0.14", only: :dev}
+     {:ex_doc, "~> 0.14", only: :dev},
+     {:jason, ">= 1.0.0", only: [:dev, :test]},
+     {:poison, ">= 1.0.0", only: [:dev, :test]},
    ]
   end
 

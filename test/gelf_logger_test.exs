@@ -217,6 +217,23 @@ defmodule GelfLoggerTest do
     assert(map["long_message"] == "test zlib")
   end
 
+  test "switching JSON encoder", context do
+    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Application.put_env(:logger, :gelf_logger,
+    Application.get_env(:logger, :gelf_logger) |> Keyword.put(:json_encoder, Jason))
+
+    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+
+    Logger.info "test different encoder"
+
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+    map = process_packet(packet)
+
+    assert(map["long_message"] == "test different encoder")
+  end
+
   defp process_packet(packet) do
     compression = Application.get_env(:logger, :gelf_logger)[:compression]
 

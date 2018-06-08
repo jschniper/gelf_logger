@@ -12,6 +12,7 @@ config :logger,
   backends: [{Logger.Backends.Gelf, :gelf_logger}]
   
 config :logger, :gelf_logger,
+  json_encoder: Poison,
   host: "127.0.0.1",
   port: 12201,
   application: "myapp",

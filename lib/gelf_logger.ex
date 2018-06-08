@@ -26,6 +26,7 @@ defmodule Logger.Backends.Gelf do
     compression: :gzip, # Defaults to :gzip, also accepts :zlib or :raw
     metadata: [:request_id, :function, :module, :file, :line],
     hostname: "hostname-override",
+    json_encoder: Poison,
     tags: [
       list: "of",
       extra: "tags"
@@ -38,6 +39,11 @@ defmodule Logger.Backends.Gelf do
   particular, modifying the `:utc_log` setting might be necessary
   depending on your server configuration.
   This backend supports `metadata: :all`.
+
+  ### Note on the JSON encoder:
+
+  Currently, the logger defaults to Poison but it can be switched out for any 
+  module that has an encode!/1 function.
 
   ## Usage
 
@@ -138,6 +144,7 @@ defmodule Logger.Backends.Gelf do
     level           = Keyword.get(config, :level)
     metadata        = Keyword.get(config, :metadata, [])
     compression     = Keyword.get(config, :compression, :gzip)
+    encoder         = Keyword.get(config, :json_encoder, Poison)
     tags            = Keyword.get(config, :tags, [])
 
     port = 
@@ -150,7 +157,7 @@ defmodule Logger.Backends.Gelf do
           port
       end
 
-    %{name: name, gl_host: gl_host, host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression, tags: tags}
+    %{name: name, gl_host: gl_host, host: to_string(hostname), port: port, metadata: metadata, level: level, application: application, socket: socket, compression: compression, tags: tags, encoder: encoder}
   end
 
   defp log_event(level, msg, ts, md, state) do
@@ -194,7 +201,7 @@ defmodule Logger.Backends.Gelf do
       _application:   state[:application]
     } |> Map.merge(fields)
 
-    data = Poison.encode!(gelf) |> compress(state[:compression])
+    data = encode(gelf, state[:encoder]) |> compress(state[:compression])
 
     size = byte_size(data)
 
@@ -235,6 +242,10 @@ defmodule Logger.Backends.Gelf do
     bin = :binary.encode_unsigned(seq)
 
     << 0x1e, 0x0f, id :: binary - size(8), bin :: binary - size(1), num :: binary - size(1), payload :: binary >>
+  end
+
+  defp encode(data, encoder) do
+    :erlang.apply(encoder, :encode!, [data])
   end
 
   defp compress(data, type) do
