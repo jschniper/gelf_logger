@@ -4,6 +4,7 @@ defmodule GelfLoggerTest do
   use ExUnit.Case, async: true
   doctest Logger.Backends.Gelf
 
+  @default_env Application.get_env(:logger, :gelf_logger)
   Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
 
   setup do 
@@ -13,6 +14,8 @@ defmodule GelfLoggerTest do
   end
 
   test "sends a message via udp", context do
+    reconfigure_backend()
+
     Logger.info "test"
 
     {:ok, {address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
@@ -29,12 +32,7 @@ defmodule GelfLoggerTest do
   end
 
   test "convert port from binary to integer", context do
-    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
-
-    Application.put_env(:logger, :gelf_logger,
-      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:port, "12201"))
-
-    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+    reconfigure_backend(port: "12201")
 
     Logger.info "test"
 
@@ -49,12 +47,7 @@ defmodule GelfLoggerTest do
   end
 
   test "configurable source (host)", context do
-    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
-
-    Application.put_env(:logger, :gelf_logger,
-      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:hostname, 'host-dev-1'))
-
-    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+    reconfigure_backend(hostname: 'host-dev-1')
 
     Logger.info "test"
 
@@ -66,12 +59,7 @@ defmodule GelfLoggerTest do
   end
 
   test "configurable tags", context do
-    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
-
-    Application.put_env(:logger, :gelf_logger,
-      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:tags, [foo: "bar", baz: "qux"]))
-
-    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+    reconfigure_backend(tags: [foo: "bar", baz: "qux"])
 
     Logger.info "test"
 
@@ -84,12 +72,7 @@ defmodule GelfLoggerTest do
   end
 
   test "configurable metadata", context do
-    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
-
-    Application.put_env(:logger, :gelf_logger,
-      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:metadata, [:this]))
-
-    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+    reconfigure_backend(metadata: [:this])
 
     Logger.metadata(this: "that", something: "else")
     Logger.info "test"
@@ -104,12 +87,7 @@ defmodule GelfLoggerTest do
   end
 
   test "all metadata possible", context do
-    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
-
-    Application.put_env(:logger, :gelf_logger,
-      Application.get_env(:logger, :gelf_logger) |> Keyword.put(:metadata, :all))
-
-    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+    reconfigure_backend(metadata: :all)
 
     Logger.metadata(this: "that", something: "else")
     Logger.info "test"
@@ -123,7 +101,30 @@ defmodule GelfLoggerTest do
     assert map["_something"] == "else"
   end
 
+  test "format message", context do
+    reconfigure_backend(format: "[$level] $message")
+
+    Logger.info "test"
+
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+    map = process_packet(packet)
+
+    assert map["short_message"] == "[info] test"
+    assert map["long_message"] == "[info] test"
+  end
+
+  test "skip empty messages", context do
+    reconfigure_backend(format: "")
+
+    Logger.info "test"
+
+    assert {:error, :timeout} == :gen_udp.recv(context[:socket], 0, 1000)
+  end
+
   test "short message should cap at 80 characters", context do
+    reconfigure_backend()
+
     Logger.info "This is a test string that is over eighty characters but only because I kept typing garbage long after I had run out of things to say"
 
     {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
@@ -135,6 +136,8 @@ defmodule GelfLoggerTest do
   end
 
   test "log levels are being set correctly", context do
+    reconfigure_backend()
+
     # DEBUG
     Logger.debug "debug"
 
@@ -179,14 +182,8 @@ defmodule GelfLoggerTest do
     # end)
   end
 
-  test "using compression", context do
-    # First for gzip
-    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
-
-    Application.put_env(:logger, :gelf_logger,
-    Application.get_env(:logger, :gelf_logger) |> Keyword.put(:compression, :gzip))
-
-    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+  test "using compression gzip", context do
+    reconfigure_backend(compression: :gzip)
 
     Logger.info "test gzip"
 
@@ -197,14 +194,10 @@ defmodule GelfLoggerTest do
     map = process_packet(packet)
 
     assert(map["long_message"] == "test gzip")
+  end
 
-    # Now, for zlib
-    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
-
-    Application.put_env(:logger, :gelf_logger,
-    Application.get_env(:logger, :gelf_logger) |> Keyword.put(:compression, :zlib))
-
-    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+  test "using compression zlib", context do
+    reconfigure_backend(compression: :zlib)
 
     Logger.info "test zlib"
 
@@ -218,12 +211,7 @@ defmodule GelfLoggerTest do
   end
 
   test "switching JSON encoder", context do
-    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
-
-    Application.put_env(:logger, :gelf_logger,
-    Application.get_env(:logger, :gelf_logger) |> Keyword.put(:json_encoder, Jason))
-
-    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+    reconfigure_backend(json_encoder: Jason)
 
     Logger.info "test different encoder"
 
@@ -246,5 +234,12 @@ defmodule GelfLoggerTest do
     {:ok,  map} = Poison.decode(data |> to_string)
 
     map
+  end
+
+  defp reconfigure_backend(new_env \\ []) do
+    Logger.remove_backend({Logger.Backends.Gelf, :gelf_logger})
+    Application.put_env(:logger, :gelf_logger, Keyword.merge(@default_env, new_env))
+    Logger.add_backend({Logger.Backends.Gelf, :gelf_logger})
+    :ok
   end
 end

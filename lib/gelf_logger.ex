@@ -22,6 +22,7 @@ defmodule Logger.Backends.Gelf do
   config :logger, :gelf_logger,
     host: "127.0.0.1",
     port: 12201,
+    format: "$message",
     application: "myapp",
     compression: :gzip, # Defaults to :gzip, also accepts :zlib or :raw
     metadata: [:request_id, :function, :module, :file, :line],
@@ -147,6 +148,7 @@ defmodule Logger.Backends.Gelf do
     compression = Keyword.get(config, :compression, :gzip)
     encoder = Keyword.get(config, :json_encoder, Poison)
     tags = Keyword.get(config, :tags, [])
+    format = Logger.Formatter.compile(Keyword.get(config, :format, "$message"))
 
     port =
       cond do
@@ -170,7 +172,8 @@ defmodule Logger.Backends.Gelf do
       socket: socket,
       compression: compression,
       tags: tags,
-      encoder: encoder
+      encoder: encoder,
+      format: format,
     }
   end
 
@@ -184,16 +187,8 @@ defmodule Logger.Backends.Gelf do
       end
 
     fields =
-      state[:metadata]
-      |> case do
-        # Use all metadata
-        :all ->
-          md
-
-        # Use only configured metadata keys
-        keys ->
-          Keyword.take(md, keys)
-      end
+      md
+      |> take_metadata(state[:metadata])
       |> Keyword.merge(state[:tags])
       |> Map.new(fn {k, v} ->
         case String.Chars.impl_for(v) do
@@ -212,10 +207,12 @@ defmodule Logger.Backends.Gelf do
 
     {timestamp, _remainder} = "#{epoch_seconds}.#{milli}" |> Float.parse()
 
+    msg_formatted = format_event(level, msg, ts, md, state)
+
     gelf =
       %{
-        short_message: String.slice(to_string(msg), 0..79),
-        long_message: to_string(msg),
+        short_message: String.slice(to_string(msg_formatted), 0..79),
+        long_message: to_string(msg_formatted),
         version: "1.1",
         host: state[:host],
         level: int_level,
@@ -229,6 +226,10 @@ defmodule Logger.Backends.Gelf do
     size = byte_size(data)
 
     cond do
+      to_string(msg_formatted) == "" ->
+        # Skip empty messages
+        :ok
+
       size > @max_size ->
         raise ArgumentError, message: "Message too large"
 
@@ -294,4 +295,24 @@ defmodule Logger.Backends.Gelf do
         data
     end
   end
+
+  # Ported from Logger.Backends.Console
+  defp format_event(level, msg, ts, md, %{format: format, metadata: keys}) do
+    Logger.Formatter.format(format, level, msg, ts, take_metadata(md, keys))
+  end
+
+  # Ported from Logger.Backends.Console
+  defp take_metadata(metadata, :all) do
+    Keyword.drop(metadata, [:crash_reason, :ancestors, :callers])
+  end
+
+  defp take_metadata(metadata, keys) do
+    Enum.reduce(keys, [], fn key, acc ->
+      case Keyword.fetch(metadata, key) do
+        {:ok, val} -> [{key, val} | acc]
+        :error -> acc
+      end
+    end)
+  end
+
 end

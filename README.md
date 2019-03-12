@@ -19,6 +19,7 @@ itself:
 config :logger, :gelf_logger,
   host: "127.0.0.1",
   port: 12201,
+  format: "$message",
   application: "myapp",
   compression: :gzip, # Defaults to :gzip, also accepts :zlib or :raw
   metadata: [:request_id, :function, :module, :file, :line],
