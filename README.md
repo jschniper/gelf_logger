@@ -7,7 +7,7 @@ current version only supports UDP messages.
 
 In the config.exs, add gelf_logger as a backend like this:
 
-```
+```elixir
 config :logger,
   backends: [:console, {Logger.Backends.Gelf, :gelf_logger}]
 ```
@@ -15,7 +15,7 @@ config :logger,
 In addition, you'll need to pass in some configuration items to the backend
 itself:
 
-```
+```elixir
 config :logger, :gelf_logger,
   host: "127.0.0.1",
   port: 12201,
@@ -23,6 +23,7 @@ config :logger, :gelf_logger,
   compression: :gzip, # Defaults to :gzip, also accepts :zlib or :raw
   metadata: [:request_id, :function, :module, :file, :line],
   hostname: "hostname-override",
+  format: {Module, :function}
   tags: [
     list: "of",
     extra: "tags"
