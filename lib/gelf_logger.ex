@@ -34,6 +34,16 @@ defmodule Logger.Backends.Gelf do
     ]
   ```
 
+  In addition, if you want to use your custom metadata formatter as a "callback",
+  you'll need to add below configuration entry:
+
+  ```
+    format: {Module, :function}
+  ```
+  Please bear in mind that your formating function MUST return a tuple in following
+  format: `{level, message, timestamp, metadata}`
+
+
   In addition to the backend configuration, you might want to check the
   [Logger configuration](https://hexdocs.pm/logger/Logger.html) for other
   options that might be important for your particular environment. In
@@ -43,7 +53,7 @@ defmodule Logger.Backends.Gelf do
 
   ### Note on the JSON encoder:
 
-  Currently, the logger defaults to Poison but it can be switched out for any 
+  Currently, the logger defaults to Poison but it can be switched out for any
   module that has an encode!/1 function.
 
   ## Usage
@@ -148,7 +158,28 @@ defmodule Logger.Backends.Gelf do
     compression = Keyword.get(config, :compression, :gzip)
     encoder = Keyword.get(config, :json_encoder, Poison)
     tags = Keyword.get(config, :tags, [])
-    format = Logger.Formatter.compile(Keyword.get(config, :format, "$message"))
+
+    format =
+      try do
+        format = Keyword.get(config, :format, "$message")
+
+        case format do
+          {module, function} ->
+            with true <- Code.ensure_compiled?(module),
+                 true <- function_exported?(module, function, 4) do
+              {module, function}
+            else
+              _ ->
+                Logger.Formatter.compile("$message")
+            end
+
+          _ ->
+            Logger.Formatter.compile(format)
+        end
+      rescue
+        _ ->
+          Logger.Formatter.compile("$message")
+      end
 
     port =
       cond do
@@ -173,11 +204,13 @@ defmodule Logger.Backends.Gelf do
       compression: compression,
       tags: tags,
       encoder: encoder,
-      format: format,
+      format: format
     }
   end
 
   defp log_event(level, msg, ts, md, state) do
+    {level, msg, ts, md} = format(level, msg, ts, md, state[:format])
+
     int_level =
       case level do
         :debug -> 7
@@ -207,7 +240,8 @@ defmodule Logger.Backends.Gelf do
 
     {timestamp, _remainder} = "#{epoch_seconds}.#{milli}" |> Float.parse()
 
-    msg_formatted = format_event(level, msg, ts, md, state)
+    msg_formatted =
+      if is_tuple(state[:format]), do: msg, else: format_event(level, msg, ts, md, state)
 
     gelf =
       %{
@@ -260,6 +294,13 @@ defmodule Logger.Backends.Gelf do
         :gen_udp.send(state[:socket], state[:gl_host], state[:port], data)
     end
   end
+
+  defp format(level, message, timestamp, metadata, {module, function}) do
+    apply(module, function, [level, message, timestamp, metadata])
+  end
+
+  defp format(level, message, timestamp, metadata, _),
+    do: {level, message, timestamp, metadata}
 
   defp send_chunks(socket, host, port, data, id, num, seq, size) when size > @max_payload_size do
     <<payload::binary-size(@max_payload_size), rest::binary>> = data
@@ -314,5 +355,4 @@ defmodule Logger.Backends.Gelf do
       end
     end)
   end
-
 end
