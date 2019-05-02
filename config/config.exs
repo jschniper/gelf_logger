@@ -10,7 +10,7 @@ use Mix.Config
 
 config :logger,
   backends: [{Logger.Backends.Gelf, :gelf_logger}]
-  
+
 config :logger, :gelf_logger,
   json_encoder: Poison,
   host: "127.0.0.1",
@@ -19,7 +19,7 @@ config :logger, :gelf_logger,
   compression: :raw,
   metadata: [:all],
   tags: [
-    env: "#{Mix.env}"
+    env: "#{Mix.env()}"
   ]
 
 # It is also possible to import configuration files, relative to this
