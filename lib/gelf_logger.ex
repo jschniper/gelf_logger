@@ -228,6 +228,9 @@ defmodule Logger.Backends.Gelf do
           nil ->
             {"_#{k}", inspect(v)}
 
+          String.Chars.List ->
+            {"_#{k}", inspect(v)}
+
           _ ->
             {"_#{k}", to_string(v)}
         end
