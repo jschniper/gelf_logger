@@ -246,7 +246,7 @@ defmodule Logger.Backends.Gelf do
     gelf =
       %{
         short_message: String.slice(to_string(msg_formatted), 0..79),
-        long_message: to_string(msg_formatted),
+        full_message: to_string(msg_formatted),
         version: "1.1",
         host: state[:host],
         level: int_level,
