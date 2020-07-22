@@ -46,6 +46,15 @@ defmodule GelfLoggerTest do
     assert map["long_message"] == "test"
   end
 
+  test "convert domain from list to binary", context do
+    reconfigure_backend(metadata: :all)
+
+    Logger.info("test")
+    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+    assert %{"_domain" => "[:elixir]"} = process_packet(packet)
+  end
+
   test "configurable source (host)", context do
     reconfigure_backend(hostname: 'host-dev-1')
 

@@ -224,12 +224,10 @@ defmodule Logger.Backends.Gelf do
       |> take_metadata(state[:metadata])
       |> Keyword.merge(state[:tags])
       |> Map.new(fn {k, v} ->
-        case String.Chars.impl_for(v) do
-          nil ->
-            {"_#{k}", inspect(v)}
-
-          _ ->
-            {"_#{k}", to_string(v)}
+        if is_list(v) or String.Chars.impl_for(v) == nil do
+          {"_#{k}", inspect(v)}
+        else
+          {"_#{k}", to_string(v)}
         end
       end)
 
