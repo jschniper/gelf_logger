@@ -28,7 +28,7 @@ defmodule GelfLoggerTest do
     assert map["version"] == "1.1"
     assert map["_application"] == "myapp"
     assert map["short_message"] == "test"
-    assert map["long_message"] == "test"
+    assert map["full_message"] == "test"
   end
 
   test "convert port from binary to integer", context do
@@ -43,7 +43,7 @@ defmodule GelfLoggerTest do
     assert map["version"] == "1.1"
     assert map["_application"] == "myapp"
     assert map["short_message"] == "test"
-    assert map["long_message"] == "test"
+    assert map["full_message"] == "test"
   end
 
   test "convert domain from list to binary", context do
@@ -120,7 +120,7 @@ defmodule GelfLoggerTest do
     map = process_packet(packet)
 
     assert map["short_message"] == "[info] test"
-    assert map["long_message"] == "[info] test"
+    assert map["full_message"] == "[info] test"
   end
 
   test "skip empty messages", context do
@@ -142,7 +142,7 @@ defmodule GelfLoggerTest do
 
     map = process_packet(packet)
 
-    assert map["short_message"] != map["long_message"]
+    assert map["short_message"] != map["full_message"]
     assert String.length(map["short_message"]) <= 80
   end
 
@@ -204,7 +204,7 @@ defmodule GelfLoggerTest do
 
     map = process_packet(packet)
 
-    assert(map["long_message"] == "test gzip")
+    assert(map["full_message"] == "test gzip")
   end
 
   test "using compression zlib", context do
@@ -218,7 +218,7 @@ defmodule GelfLoggerTest do
 
     map = process_packet(packet)
 
-    assert(map["long_message"] == "test zlib")
+    assert(map["full_message"] == "test zlib")
   end
 
   test "switching JSON encoder", context do
@@ -230,7 +230,7 @@ defmodule GelfLoggerTest do
 
     map = process_packet(packet)
 
-    assert(map["long_message"] == "test different encoder")
+    assert(map["full_message"] == "test different encoder")
   end
 
   test "can use custom formatter", context do
@@ -261,7 +261,7 @@ defmodule GelfLoggerTest do
     map = process_packet(packet)
 
     refute(Map.has_key?(map, "_timestamp_us"))
-    assert(map["long_message"] == "test bad formatter callback")
+    assert(map["full_message"] == "test bad formatter callback")
   end
 
   defp process_packet(packet) do
