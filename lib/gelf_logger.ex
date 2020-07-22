@@ -165,7 +165,7 @@ defmodule Logger.Backends.Gelf do
 
         case format do
           {module, function} ->
-            with true <- Code.ensure_compiled?(module),
+            with true <- Code.ensure_loaded?(module),
                  true <- function_exported?(module, function, 4) do
               {module, function}
             else

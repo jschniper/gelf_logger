@@ -58,3 +58,4 @@ someone in its current state. Pull requests are always welcome.
 Credit where credit is due, this would not exist without
 [protofy/erl_graylog_sender](https://github.com/protofy/erl_graylog_sender).
 
+Looking for maintainers if anyone would like to help!
