@@ -47,12 +47,15 @@ defmodule GelfLoggerTest do
   end
 
   test "convert domain from list to binary", context do
-    reconfigure_backend(metadata: :all)
+    if Version.compare(System.version(), "1.10.0") in [:gt, :eq] do
+      reconfigure_backend(metadata: :all)
 
-    Logger.info("test")
-    {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+      Logger.info("test")
 
-    assert %{"_domain" => "[:elixir]"} = process_packet(packet)
+      {:ok, {_address, _port, packet}} = :gen_udp.recv(context[:socket], 0, 2000)
+
+      assert %{"_domain" => "[:elixir]"} = process_packet(packet)
+    end
   end
 
   test "configurable source (host)", context do
