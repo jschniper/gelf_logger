@@ -4,7 +4,7 @@ defmodule GelfLogger.Mixfile do
   def project do
     [app: :gelf_logger,
      version: "0.10.0",
-     elixir: "~> 1.2",
+     elixir: "~> 1.8",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      elixirc_paths: elixirc_paths(Mix.env()),
@@ -14,7 +14,7 @@ defmodule GelfLogger.Mixfile do
 
      # Docs
      name: "GELF Logger",
-     source_url: "https://github.com/jschniper/gelf_logger",
+     source_url: "https://github.com/manuel-rubio/gelf_logger",
      docs: [
        main: "Logger.Backends.Gelf",
        extras: ["README.md"]
@@ -29,14 +29,17 @@ defmodule GelfLogger.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger]]
+    [
+      extra_applications: [:logger],
+      mod: {GelfLogger.Application, []}
+    ]
   end
 
   defp deps do
    [
-     {:ex_doc, "~> 0.14", only: :dev},
-     {:jason, ">= 1.0.0", only: [:dev, :test]},
-     {:poison, ">= 1.0.0", only: [:dev, :test]},
+     {:ex_doc, "~> 0.23", only: :dev},
+     {:jason, "~> 1.2", optional: true},
+     {:poison, "~> 4.0", optional: true}
    ]
   end
 
@@ -50,7 +53,6 @@ defmodule GelfLogger.Mixfile do
   defp package do
     [
       files: ["lib", "mix.exs", "README*", "LICENSE" ],
-      maintainers: ["Joshua Schniper"],
       licenses: ["MIT"],
       links: %{"Github": "https://github.com/jschniper/gelf_logger"}
     ]

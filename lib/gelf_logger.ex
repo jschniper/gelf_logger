@@ -77,11 +77,6 @@ defmodule Logger.Backends.Gelf do
   [protofy/erl_graylog_sender](https://github.com/protofy/erl_graylog_sender).
   """
 
-  @max_size 1_047_040
-  @max_packet_size 8192
-  @max_payload_size 8180
-  @epoch :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
-
   @behaviour :gen_event
 
   def init({__MODULE__, name}) do
@@ -103,7 +98,7 @@ defmodule Logger.Backends.Gelf do
 
   def handle_event({level, _gl, {Logger, msg, ts, md}}, %{level: min_level} = state) do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
-      log_event(level, msg, ts, md, state)
+      GelfLogger.Worker.start_child(level, msg, ts, md, state)
     end
 
     {:ok, state}
@@ -182,14 +177,11 @@ defmodule Logger.Backends.Gelf do
       end
 
     port =
-      cond do
-        is_binary(port) ->
-          {val, ""} = Integer.parse(to_string(port))
-
-          val
-
-        true ->
-          port
+      if is_binary(port) do
+        {val, ""} = Integer.parse(to_string(port))
+        val
+      else
+        port
       end
 
     %{
@@ -206,151 +198,5 @@ defmodule Logger.Backends.Gelf do
       encoder: encoder,
       format: format
     }
-  end
-
-  defp log_event(level, msg, ts, md, state) do
-    {level, msg, ts, md} = format(level, msg, ts, md, state[:format])
-
-    int_level =
-      case level do
-        :debug -> 7
-        :info -> 6
-        :warn -> 4
-        :error -> 3
-      end
-
-    fields =
-      md
-      |> take_metadata(state[:metadata])
-      |> Keyword.merge(state[:tags])
-      |> Map.new(fn {k, v} ->
-        if is_list(v) or String.Chars.impl_for(v) == nil do
-          {"_#{k}", inspect(v)}
-        else
-          {"_#{k}", to_string(v)}
-        end
-      end)
-
-    {{year, month, day}, {hour, min, sec, milli}} = ts
-
-    epoch_seconds =
-      :calendar.datetime_to_gregorian_seconds({{year, month, day}, {hour, min, sec}}) - @epoch
-
-    {timestamp, _remainder} = "#{epoch_seconds}.#{milli}" |> Float.parse()
-
-    msg_formatted =
-      if is_tuple(state[:format]), do: msg, else: format_event(level, msg, ts, md, state)
-
-    gelf =
-      %{
-        short_message: String.slice(to_string(msg_formatted), 0..79),
-        full_message: to_string(msg_formatted),
-        version: "1.1",
-        host: state[:host],
-        level: int_level,
-        timestamp: Float.round(timestamp, 3),
-        _application: state[:application]
-      }
-      |> Map.merge(fields)
-
-    data = encode(gelf, state[:encoder]) |> compress(state[:compression])
-
-    size = byte_size(data)
-
-    cond do
-      to_string(msg_formatted) == "" ->
-        # Skip empty messages
-        :ok
-
-      size > @max_size ->
-        raise ArgumentError, message: "Message too large"
-
-      size > @max_packet_size ->
-        num = div(size, @max_packet_size)
-
-        num =
-          if num * @max_packet_size < size do
-            num + 1
-          else
-            num
-          end
-
-        id = :crypto.strong_rand_bytes(8)
-
-        send_chunks(
-          state[:socket],
-          state[:gl_host],
-          state[:port],
-          data,
-          id,
-          :binary.encode_unsigned(num),
-          0,
-          size
-        )
-
-      true ->
-        :gen_udp.send(state[:socket], state[:gl_host], state[:port], data)
-    end
-  end
-
-  defp format(level, message, timestamp, metadata, {module, function}) do
-    apply(module, function, [level, message, timestamp, metadata])
-  end
-
-  defp format(level, message, timestamp, metadata, _),
-    do: {level, message, timestamp, metadata}
-
-  defp send_chunks(socket, host, port, data, id, num, seq, size) when size > @max_payload_size do
-    <<payload::binary-size(@max_payload_size), rest::binary>> = data
-
-    :gen_udp.send(socket, host, port, make_chunk(payload, id, num, seq))
-
-    send_chunks(socket, host, port, rest, id, num, seq + 1, byte_size(rest))
-  end
-
-  defp send_chunks(socket, host, port, data, id, num, seq, _size) do
-    :gen_udp.send(socket, host, port, make_chunk(data, id, num, seq))
-  end
-
-  defp make_chunk(payload, id, num, seq) do
-    bin = :binary.encode_unsigned(seq)
-
-    <<0x1E, 0x0F, id::binary-size(8), bin::binary-size(1), num::binary-size(1), payload::binary>>
-  end
-
-  defp encode(data, encoder) do
-    :erlang.apply(encoder, :encode!, [data])
-  end
-
-  defp compress(data, type) do
-    case type do
-      :gzip ->
-        :zlib.gzip(data)
-
-      :zlib ->
-        :zlib.compress(data)
-
-      _ ->
-        data
-    end
-  end
-
-  # Ported from Logger.Backends.Console
-  defp format_event(level, msg, ts, md, %{format: format, metadata: keys}) do
-    Logger.Formatter.format(format, level, msg, ts, take_metadata(md, keys))
-  end
-
-  # Ported from Logger.Backends.Console
-  defp take_metadata(metadata, :all) do
-    Keyword.drop(metadata, [:crash_reason, :ancestors, :callers])
-  end
-
-  defp take_metadata(metadata, keys) do
-    Enum.reduce(keys, [], fn key, acc ->
-      case Keyword.fetch(metadata, key) do
-        {:ok, val} -> [{key, val} | acc]
-        :error -> acc
-      end
-    end)
   end
 end
