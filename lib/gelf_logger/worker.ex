@@ -76,7 +76,8 @@ defmodule GelfLogger.Worker do
         :ok
 
       size > @max_size ->
-        raise ArgumentError, message: "Message too large"
+        # Ignore huge messages
+        :ok
 
       size > @max_packet_size ->
         num = div(size, @max_packet_size)

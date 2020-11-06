@@ -1,7 +1,6 @@
 defmodule Logger.Backends.Gelf do
   @moduledoc """
   GELF Logger Backend
-  # GelfLogger [![Build Status](https://travis-ci.org/jschniper/gelf_logger.svg?branch=master)](https://travis-ci.org/jschniper/gelf_logger)
 
   A logger backend that will generate Graylog Extended Log Format messages. The
   current version only supports UDP messages.
@@ -79,7 +78,7 @@ defmodule Logger.Backends.Gelf do
 
   @behaviour :gen_event
 
-  def init({__MODULE__, name}) do
+  def init({_module, name}) do
     if user = Process.whereis(:user) do
       Process.group_leader(self(), user)
       {:ok, configure(name, [])}
@@ -98,7 +97,7 @@ defmodule Logger.Backends.Gelf do
 
   def handle_event({level, _gl, {Logger, msg, ts, md}}, %{level: min_level} = state) do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
-      GelfLogger.Worker.start_child(level, msg, ts, md, state)
+      GelfLogger.Worker.run([level, msg, ts, md, state])
     end
 
     {:ok, state}
