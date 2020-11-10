@@ -1,4 +1,4 @@
-# GelfLogger [![Build Status](https://travis-ci.org/manuel-rubio/gelf_logger.svg?branch=master)](https://travis-ci.org/manuel-rubio/gelf_logger)
+# GelfLogger [![Build Status](https://travis-ci.org/jschniper/gelf_logger.svg?branch=master)](https://travis-ci.org/jschniper/gelf_logger)
 
 A logger backend that will generate Graylog Extended Log Format messages. The
 current version only supports UDP messages.
@@ -10,6 +10,13 @@ In the config.exs, add gelf_logger as a backend like this:
 ```elixir
 config :logger,
   backends: [:console, {Logger.Backends.Gelf, :gelf_logger}]
+```
+
+If you want to use the asynchronous handler then you have to use:
+
+```elixir
+config :logger,
+  backends: [:console, {Logger.Backends.GelfAsync, :gelf_logger}]
 ```
 
 In addition, you'll need to pass in some configuration items to the backend
