@@ -89,7 +89,7 @@ defmodule Logger.Backends.GelfAsync do
 
   def handle_event({level, _gl, {Logger, msg, ts, md}}, %{level: min_level} = state) do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
-      GelfLogger.Worker.run([level, msg, ts, md, state])
+      GelfLogger.Balancer.cast(level, msg, ts, md, state)
     end
 
     {:ok, state}

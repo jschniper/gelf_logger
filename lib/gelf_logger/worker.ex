@@ -1,16 +1,21 @@
 defmodule GelfLogger.Worker do
-  @supervisor GelfLogger.Pool
+  use GenServer, restart: :temporary
+
   @max_size 1_047_040
   @max_packet_size 8192
   @max_payload_size 8180
 
-  def start_child(level, msg, ts, md, state) do
-    args = [level, msg, ts, md, state]
-    opts = [restart: :transient]
-    Task.Supervisor.start_child(@supervisor, __MODULE__, :run, [args], opts)
+  def start_link([]) do
+    GenServer.start_link(__MODULE__, [])
   end
 
-  def run([level, msg, ts, md, state]) do
+  @impl GenServer
+  def init([]) do
+    {:ok, []}
+  end
+
+  @impl GenServer
+  def handle_cast([level, msg, ts, md, state], []) do
     {level, msg, ts, md} = format(level, msg, ts, md, state[:format])
 
     int_level =
@@ -105,6 +110,7 @@ defmodule GelfLogger.Worker do
       true ->
         :gen_udp.send(state[:socket], state[:gl_host], state[:port], data)
     end
+    {:noreply, []}
   end
 
   defp format(level, message, timestamp, metadata, {module, function}) do
