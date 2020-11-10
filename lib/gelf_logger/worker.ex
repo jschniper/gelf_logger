@@ -4,6 +4,7 @@ defmodule GelfLogger.Worker do
   @max_size 1_047_040
   @max_packet_size 8192
   @max_payload_size 8180
+  @default_name :gelf_logger
 
   def start_link([]) do
     GenServer.start_link(__MODULE__, [])
@@ -11,12 +12,12 @@ defmodule GelfLogger.Worker do
 
   @impl GenServer
   def init([]) do
-    {:ok, []}
+    {:ok, GelfLogger.Config.configure(@default_name, [])}
   end
 
   @impl GenServer
-  def handle_cast([level, msg, ts, md, state], []) do
-    {level, msg, ts, md} = format(level, msg, ts, md, state[:format])
+  def handle_cast([level, msg, ts, md], state) do
+    {level, msg, ts, md} = format(level, msg, ts, md, state.format)
 
     int_level =
       case level do
@@ -32,8 +33,8 @@ defmodule GelfLogger.Worker do
 
     fields =
       md
-      |> take_metadata(state[:metadata])
-      |> Keyword.merge(state[:tags])
+      |> take_metadata(state.metadata)
+      |> Keyword.merge(state.tags)
       |> Map.new(fn {k, v} ->
         if is_list(v) or String.Chars.impl_for(v) == nil do
           {"_#{k}", inspect(v)}
@@ -53,7 +54,7 @@ defmodule GelfLogger.Worker do
     timestamp = Float.round(epoch_milliseconds / 1_000, 3)
 
     msg_formatted =
-      if(is_tuple(state[:format]), do: msg, else: format_event(level, msg, ts, md, state))
+      if(is_tuple(state.format), do: msg, else: format_event(level, msg, ts, md, state))
       |> to_string()
 
     gelf =
@@ -61,17 +62,17 @@ defmodule GelfLogger.Worker do
         short_message: String.slice(msg_formatted, 0..79),
         full_message: msg_formatted,
         version: "1.1",
-        host: state[:host],
+        host: state.host,
         level: int_level,
         timestamp: timestamp,
-        _application: state[:application]
+        _application: state.application
       }
       |> Map.merge(fields)
 
     data =
       gelf
-      |> encode(state[:encoder])
-      |> compress(state[:compression])
+      |> encode(state.encoder)
+      |> compress(state.compression)
 
     size = byte_size(data)
 
@@ -97,9 +98,9 @@ defmodule GelfLogger.Worker do
         id = :crypto.strong_rand_bytes(8)
 
         send_chunks(
-          state[:socket],
-          state[:gl_host],
-          state[:port],
+          state.socket,
+          state.gl_host,
+          state.port,
           data,
           id,
           :binary.encode_unsigned(num),
@@ -108,9 +109,20 @@ defmodule GelfLogger.Worker do
         )
 
       true ->
-        :gen_udp.send(state[:socket], state[:gl_host], state[:port], data)
+        :gen_udp.send(state.socket, state.gl_host, state.port, data)
     end
-    {:noreply, []}
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:configure, from, name, options}, state) do
+    if state.socket do
+      :gen_udp.close(state.socket)
+    end
+
+    state = GelfLogger.Config.configure(name, options)
+    GenServer.reply(from, state)
+    {:noreply, state}
   end
 
   defp format(level, message, timestamp, metadata, {module, function}) do

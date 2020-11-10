@@ -60,7 +60,7 @@ defmodule Logger.Backends.GelfTest do
   end
 
   test "configurable source (host)", context do
-    reconfigure_backend(hostname: 'host-dev-1', port: context[:port])
+    reconfigure_backend(hostname: "host-dev-1", port: context[:port])
 
     Logger.info("test")
 
@@ -279,7 +279,10 @@ defmodule Logger.Backends.GelfTest do
         _ -> packet
       end
 
-    {:ok, map} = Poison.decode(data |> to_string)
+    {:ok, map} =
+      data
+      |> to_string()
+      |> Poison.decode()
 
     map
   end

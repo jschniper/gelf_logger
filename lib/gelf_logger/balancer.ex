@@ -12,15 +12,22 @@ defmodule GelfLogger.Balancer do
     DynamicSupervisor.start_child(@supervisor, @worker)
   end
 
-  def cast(level, msg, ts, md, state) do
-    GenServer.cast(__MODULE__, [level, msg, ts, md, state])
+  def configure(name, options) do
+    GenServer.call(__MODULE__, {:configure, name, options})
+  end
+
+  def cast(level, msg, ts, md) do
+    GenServer.cast(__MODULE__, {:cast, level, msg, ts, md})
   end
 
   @impl GenServer
   def init(opts) do
-    pool_size = opts[:pool_size] || raise """
-    Gelf Logger: Not provided pool_size configuration!
-    """
+    pool_size =
+      opts[:pool_size] ||
+        raise """
+        Gelf Logger: Not provided pool_size configuration!
+        """
+
     pids =
       for _ <- 1..pool_size do
         {:ok, pid} = start_new_child()
@@ -32,9 +39,15 @@ defmodule GelfLogger.Balancer do
   end
 
   @impl GenServer
-  def handle_cast(msg, [pid | pids]) do
-    :ok = GenServer.cast(pid, msg)
+  def handle_cast({:cast, level, msg, ts, md}, [pid | pids]) do
+    :ok = GenServer.cast(pid, [level, msg, ts, md])
     {:noreply, pids ++ [pid]}
+  end
+
+  @impl GenServer
+  def handle_call({:configure, name, options}, from, pids) do
+    for pid <- pids, do: GenServer.cast(pid, {:configure, from, name, options})
+    {:noreply, pids}
   end
 
   @impl GenServer
@@ -45,7 +58,7 @@ defmodule GelfLogger.Balancer do
 
   @impl GenServer
   def terminate(_reason, pids) do
-    Enum.each pids, &GenServer.stop/1
+    Enum.each(pids, &GenServer.stop/1)
     :ok
   end
 end

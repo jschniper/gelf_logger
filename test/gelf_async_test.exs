@@ -60,7 +60,7 @@ defmodule Logger.Backends.GelfAsyncTest do
   end
 
   test "configurable source (host)", context do
-    reconfigure_backend(hostname: 'host-dev-1', port: context[:port])
+    reconfigure_backend(hostname: "host-dev-1", port: context[:port])
 
     Logger.info("test")
 

@@ -79,9 +79,15 @@ defmodule Logger.Backends.GelfAsync do
 
   @behaviour :gen_event
 
-  defdelegate init(args), to: Logger.Backends.Gelf
+  def init({_module, name}) do
+    state = GelfLogger.Balancer.configure(name, [])
+    {:ok, %{name: name, level: state.level}}
+  end
 
-  defdelegate handle_call(message, state), to: Logger.Backends.Gelf
+  def handle_call({:configure, options}, state) do
+    state = GelfLogger.Balancer.configure(state.name, options)
+    {:ok, :ok, %{state | level: state.level}}
+  end
 
   def handle_event({_level, gl, _event}, state) when node(gl) != node() do
     {:ok, state}
@@ -89,7 +95,7 @@ defmodule Logger.Backends.GelfAsync do
 
   def handle_event({level, _gl, {Logger, msg, ts, md}}, %{level: min_level} = state) do
     if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
-      GelfLogger.Balancer.cast(level, msg, ts, md, state)
+      GelfLogger.Balancer.cast(level, msg, ts, md)
     end
 
     {:ok, state}
