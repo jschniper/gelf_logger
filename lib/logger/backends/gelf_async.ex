@@ -80,13 +80,15 @@ defmodule Logger.Backends.GelfAsync do
   @behaviour :gen_event
 
   def init({_module, name}) do
-    state = GelfLogger.Balancer.configure(name, [])
-    {:ok, %{name: name, level: state.level}}
+    GelfLogger.Balancer.configure(name, [])
+    log_level = GelfLogger.Config.get_loglevel(name, [])
+    {:ok, %{name: name, level: log_level}}
   end
 
   def handle_call({:configure, options}, state) do
-    state = GelfLogger.Balancer.configure(state.name, options)
-    {:ok, :ok, %{state | level: state.level}}
+    GelfLogger.Balancer.configure(state.name, options)
+    log_level = GelfLogger.Config.get_loglevel(state.name, options)
+    {:ok, :ok, %{state | level: log_level}}
   end
 
   def handle_event({_level, gl, _event}, state) when node(gl) != node() do

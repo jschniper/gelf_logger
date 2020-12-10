@@ -12,7 +12,9 @@ defmodule GelfLogger.Worker do
 
   @impl GenServer
   def init([]) do
-    {:ok, GelfLogger.Config.configure(@default_name, [])}
+    {:configure, name, options} = :persistent_term.get(:gelf_logger, {:configure, @default_name, []})
+    state = GelfLogger.Config.configure(name, options)
+    {:ok, state}
   end
 
   @impl GenServer
@@ -115,13 +117,13 @@ defmodule GelfLogger.Worker do
     {:noreply, state}
   end
 
-  def handle_cast({:configure, from, name, options}, state) do
+  def handle_cast({:configure, name, options}, state) do
     if state.socket do
       :gen_udp.close(state.socket)
     end
 
     state = GelfLogger.Config.configure(name, options)
-    GenServer.reply(from, state)
+    :persistent_term.put(:gelf_logger, {:configure, name, options})
     {:noreply, state}
   end
 

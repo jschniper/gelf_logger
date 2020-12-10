@@ -19,6 +19,13 @@ defmodule GelfLogger.Config do
     :format
   ]
 
+  def get_loglevel(name, options) do
+    :logger
+    |> Application.get_env(name, [])
+    |> Keyword.merge(options)
+    |> Keyword.get(:level)
+  end
+
   def configure(name, options) do
     config = Keyword.merge(Application.get_env(:logger, name, []), options)
     Application.put_env(:logger, name, config)

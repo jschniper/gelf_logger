@@ -13,7 +13,7 @@ config :logger,
   truncate: :infinity
 
 config :logger, :gelf_logger,
-  json_encoder: Poison,
+  json_encoder: Jason,
   host: "127.0.0.1",
   port: 12201,
   application: "myapp",

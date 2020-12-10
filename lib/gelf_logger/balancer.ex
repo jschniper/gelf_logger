@@ -13,7 +13,11 @@ defmodule GelfLogger.Balancer do
   end
 
   def configure(name, options) do
-    GenServer.call(__MODULE__, {:configure, name, options})
+    if Process.whereis(__MODULE__) do
+      GenServer.cast(__MODULE__, {:configure, name, options})
+    else
+      :persistent_term.put(:gelf_logger, {:configure, name, options})
+    end
   end
 
   def cast(level, msg, ts, md) do
@@ -44,9 +48,8 @@ defmodule GelfLogger.Balancer do
     {:noreply, pids ++ [pid]}
   end
 
-  @impl GenServer
-  def handle_call({:configure, name, options}, from, pids) do
-    for pid <- pids, do: GenServer.cast(pid, {:configure, from, name, options})
+  def handle_cast({:configure, name, options}, pids) do
+    for pid <- pids, do: GenServer.cast(pid, {:configure, name, options})
     {:noreply, pids}
   end
 
