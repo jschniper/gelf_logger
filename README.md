@@ -12,6 +12,13 @@ config :logger,
   backends: [:console, {Logger.Backends.Gelf, :gelf_logger}]
 ```
 
+If you want to use the asynchronous handler then you have to use:
+
+```elixir
+config :logger,
+  backends: [:console, {Logger.Backends.GelfAsync, :gelf_logger}]
+```
+
 In addition, you'll need to pass in some configuration items to the backend
 itself:
 

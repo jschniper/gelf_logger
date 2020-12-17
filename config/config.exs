@@ -9,10 +9,11 @@ use Mix.Config
 # 3rd-party users, it should be done in your "mix.exs" file.
 
 config :logger,
-  backends: [{Logger.Backends.Gelf, :gelf_logger}]
+  backends: [],
+  truncate: :infinity
 
 config :logger, :gelf_logger,
-  json_encoder: Poison,
+  json_encoder: Jason,
   host: "127.0.0.1",
   port: 12201,
   application: "myapp",
