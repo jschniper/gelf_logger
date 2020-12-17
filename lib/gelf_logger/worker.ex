@@ -49,7 +49,7 @@ defmodule GelfLogger.Worker do
 
     epoch_milliseconds =
       {{year, month, day}, {hour, min, sec}}
-      |> NaiveDateTime.from_erl!({milli, 0})
+      |> NaiveDateTime.from_erl!({milli * 1_000, 0})
       |> DateTime.from_naive!("Etc/UTC")
       |> DateTime.to_unix(:millisecond)
 
